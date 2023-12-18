@@ -140,13 +140,6 @@ void main()
 	int* tmp = matmul();
 	for(int i = 0; i < 4; i++){
 	    reg_mprj_datal = *(tmp+i) << 16;
-	    reg_mprj_datal = *(tmp+i) << 16;
-	    reg_mprj_datal = *(tmp+i) << 16;
-	    reg_mprj_datal = *(tmp+i) << 16;
-	    reg_mprj_datal = *(tmp+i) << 16;
-	    reg_mprj_datal = *(tmp+i) << 16;
-	    reg_mprj_datal = *(tmp+i) << 16;
-	    reg_mprj_datal = *(tmp+i) << 16;
 	}
 
 	
@@ -154,26 +147,12 @@ void main()
 	tmp = qsort();
 	for(int i = 0; i < 10; i++){
 	    reg_mprj_datal = *(tmp+i) << 16;
-	    reg_mprj_datal = *(tmp+i) << 16;
-	    reg_mprj_datal = *(tmp+i) << 16;
-	    reg_mprj_datal = *(tmp+i) << 16;
-	    reg_mprj_datal = *(tmp+i) << 16;
-	    reg_mprj_datal = *(tmp+i) << 16;
-	    reg_mprj_datal = *(tmp+i) << 16;
-	    reg_mprj_datal = *(tmp+i) << 16;
 	}
 
 	
 	reg_mprj_datal = 0xAB600000;
 	tmp = fir();
 	for(int i = 0; i < 11; i++){
-	    reg_mprj_datal = *(tmp+i) << 16;
-	    reg_mprj_datal = *(tmp+i) << 16;
-	    reg_mprj_datal = *(tmp+i) << 16;
-	    reg_mprj_datal = *(tmp+i) << 16;
-	    reg_mprj_datal = *(tmp+i) << 16;
-	    reg_mprj_datal = *(tmp+i) << 16;
-	    reg_mprj_datal = *(tmp+i) << 16;
 	    reg_mprj_datal = *(tmp+i) << 16;
 	}
 	
