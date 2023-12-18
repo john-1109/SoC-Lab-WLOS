@@ -54,7 +54,7 @@ reg comp_valid_w, comp_valid_r;
 
 wire [pDATA_WIDTH-1:0] ap_data;
 
-integer i,j,k,m;
+integer i,j,k,m,n,o,p;
 // assignments
 assign ap_data = {29'b0 ,ap_idle_r, ap_done_r, ap_start_r};
 assign ss_tready = 1;
@@ -153,8 +153,8 @@ always @(*) begin
     if (ss_tvalid) begin
         stream_cnt_w = stream_cnt_r + 1;
         if (stream_cnt_r < 16) begin //stream in b
-            for (i = 0; i<15; i = i + 1) begin
-                b_w[i] = b_r[i+1];
+            for (n = 0; n<15; n = n + 1) begin
+                b_w[n] = b_r[n+1];
             end
             b_w[15] = ss_tdata;
         end
@@ -165,8 +165,8 @@ always @(*) begin
             a_rowload_w[0] = a_rowload_r[1];
 
             if (stream_cnt_r[1:0] == 3) begin //load a full column
-                for (i = 0; i<3; i = i + 1) begin
-                    a_rowused_w[i] = a_rowload_r[i];
+                for (o = 0; o<3; o = o + 1) begin
+                    a_rowused_w[o] = a_rowload_r[o];
                 end
                 a_rowused_w[3] = ss_tdata;
             end

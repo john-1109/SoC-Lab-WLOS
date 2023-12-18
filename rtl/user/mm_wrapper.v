@@ -176,6 +176,7 @@ always @(*) begin
             if (sm_tvalid) begin
                 sm_data_buf_w = sm_tdata;
                 wb_state_w = S_ACK;
+                sm_tready_w = 0;
             end
         end
         S_ACK:begin
