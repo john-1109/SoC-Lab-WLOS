@@ -159,20 +159,9 @@ module counter_la_all_tb;
 	end
 
 	initial begin
-		wait(checkbits == 16'hAB40);
+		wait(checkbits == 16'hAB50);
 		$display("LA Test 1 started");
 
-		// matrix multiplication
-		wait(checkbits == 16'h003E);
-		$display("Call function matmul() in User Project BRAM return value passed, 0x%x", checkbits);
-		wait(checkbits == 16'h0044);
-		$display("Call function matmul() in User Project BRAM return value passed, 0x%x", checkbits);
-		wait(checkbits == 16'h004A);
-		$display("Call function matmul() in User Project BRAM return value passed, 0x%x", checkbits);
-		wait(checkbits == 16'h0050);
-		$display("Call function matmul() in User Project BRAM return value passed, 0x%x", checkbits);
-		$display("matmul passed\n");
-		
 		// quick sort
 		wait(checkbits == 16'd40);
 		$display("Call function qsort() in User Project BRAM  return value passed, 0x%x", checkbits);
@@ -195,6 +184,19 @@ module counter_la_all_tb;
 		wait(checkbits == 16'd9073);
 		$display("Call function qsort() in User Project BRAM  return value passed, 0x%x", checkbits);
 		$display("qsort passed\n");
+
+		// matrix multiplication
+		wait(checkbits == 16'h003E);
+		$display("Call function matmul() in User Project BRAM return value passed, 0x%x", checkbits);
+		wait(checkbits == 16'h0044);
+		$display("Call function matmul() in User Project BRAM return value passed, 0x%x", checkbits);
+		wait(checkbits == 16'h004A);
+		$display("Call function matmul() in User Project BRAM return value passed, 0x%x", checkbits);
+		wait(checkbits == 16'h0050);
+		$display("Call function matmul() in User Project BRAM return value passed, 0x%x", checkbits);
+		$display("matmul passed\n");
+		
+		
 		
 		// fir
 		wait(checkbits == 16'h0000);

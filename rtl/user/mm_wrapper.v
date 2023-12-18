@@ -116,7 +116,7 @@ always @(*) begin
 
     wb_state_w = wb_state_r;
     wbs_ack_o = 0;
-    /*
+
     case (wb_state_r)
         S_IDLE:begin
             if (wb_valid && (wbs_we_i) && axil_valid) begin
@@ -183,7 +183,7 @@ always @(*) begin
             wbs_ack_o = 1;
         end
     endcase
-    */
+
 end
 
 always @(posedge wb_clk_i or posedge wb_rst_i) begin

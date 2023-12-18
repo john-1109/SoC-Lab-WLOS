@@ -56,7 +56,7 @@ always@(*)begin
     end
 end
 
-assign wbs_ack_o = uart_ack_o | bram_ack_o | fir_ack_o | qsort_ack_o;//uart_ack_o | bram_ack_o | mm_ack_o | qsort_ack_o | fir_ack_o;
+assign wbs_ack_o = uart_ack_o | bram_ack_o | fir_ack_o | qsort_ack_o | mm_ack_o;//uart_ack_o | bram_ack_o | mm_ack_o | qsort_ack_o | fir_ack_o;
 assign wbs_dat_o = wbs_dat_o_w;
 
 always@(*)begin

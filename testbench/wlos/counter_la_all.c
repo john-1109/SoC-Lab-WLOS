@@ -135,19 +135,23 @@ void main()
 
 
 
-	// Matrix multiplication
-	reg_mprj_datal = 0xAB400000;
-	int* tmp = matmul();
-	for(int i = 0; i < 4; i++){
-	    reg_mprj_datal = *(tmp+i) << 16;
-	}
-
-	
 	reg_mprj_datal = 0xAB500000;
+
+	int *tmp;
+	
 	tmp = qsort();
 	for(int i = 0; i < 10; i++){
 	    reg_mprj_datal = *(tmp+i) << 16;
 	}
+
+	// Matrix multiplication
+	reg_mprj_datal = 0xAB400000;
+	tmp = matmul();
+	for(int i = 0; i < 4; i++){
+	    reg_mprj_datal = *(tmp+i) << 16;
+	}
+
+
 
 	
 	reg_mprj_datal = 0xAB600000;
