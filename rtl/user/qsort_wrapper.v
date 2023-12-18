@@ -113,6 +113,7 @@ always @(*) begin
     ss_tdata_w = ss_tdata;
 
     sm_tready_w = 0;
+
     sm_data_buf_w = sm_data_buf_r;
 
     wb_state_w = wb_state_r;
@@ -140,8 +141,8 @@ always @(*) begin
             end
 
             if (wb_valid && (~wbs_we_i) && axis_valid) begin
-                sm_tready_w = 1;
                 wb_state_w = S_AXISR;
+                sm_tready_w = 1;
             end
         end 
         S_AXILW:begin
@@ -176,6 +177,7 @@ always @(*) begin
             if (sm_tvalid) begin
                 sm_data_buf_w = sm_tdata;
                 wb_state_w = S_ACK;
+                sm_tready_w = 0;
             end
         end
         S_ACK:begin
@@ -200,8 +202,8 @@ always @(posedge wb_clk_i or posedge wb_rst_i) begin
 
         ss_tvalid <= 0;
         ss_tdata <= 0;
-
         sm_tready <= 0;
+
         sm_data_buf_r <= 0;
 
         wb_state_r <= 0;
@@ -221,8 +223,8 @@ always @(posedge wb_clk_i or posedge wb_rst_i) begin
 
         ss_tvalid <= ss_tvalid_w;
         ss_tdata <= ss_tdata_w;
-
         sm_tready <= sm_tready_w;
+
 
         axilr_data_r <= axilr_data_w;
 

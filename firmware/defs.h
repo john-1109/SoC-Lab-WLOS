@@ -23,7 +23,7 @@
 #include <csr.h>
 #include <caravel.h>
 
-//#define wlos_act
+#define wlos_act
 
 // a pointer to this is a null pointer, but the compiler does not
 // know that because "sram" is a linker symbol from sections.lds.

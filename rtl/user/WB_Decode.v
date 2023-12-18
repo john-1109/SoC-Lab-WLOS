@@ -97,7 +97,7 @@ uart uart_ip(
     .io_oeb         (io_oeb     ),
     .user_irq       (irq        )
 );
-/*
+
 mm_wrapper mm_ip(
     .wb_clk_i         (wb_clk_i  ),
     .wb_rst_i         (wb_rst_i  ),
@@ -109,7 +109,7 @@ mm_wrapper mm_ip(
     .wbs_ack_o        (mm_ack_o ),
     .wbs_dat_o        (mm_dat_o )
 );
-*/
+
 qsort_wrapper qsort_ip(
     .wb_clk_i         (wb_clk_i  ),
     .wb_rst_i         (wb_rst_i  ),

@@ -49,13 +49,12 @@ reg [5:0] out_cnt_w, out_cnt_r;
 reg [31:0] out_w [0:15], out_r [0:15];
 reg out_valid_w [0:15], out_valid_r[0:15];
 wire [31:0] mul_out;
-reg sm_tvalid_w;
 reg comp_valid_w, comp_valid_r;
 
 
 wire [pDATA_WIDTH-1:0] ap_data;
 
-integer i, j, k;
+integer i,j,k,m;
 // assignments
 assign ap_data = {29'b0 ,ap_idle_r, ap_done_r, ap_start_r};
 assign ss_tready = 1;
@@ -83,6 +82,7 @@ RowMulCol rowmulcol0(
 // combinational logic
 
 // state machine
+
 always @(*) begin
     state_w = state_r;
 
@@ -137,15 +137,18 @@ end
 
 // data stream in
 always @(*) begin
+    
+    // idk why here need to use a different integer...
+    for (k = 0; k<16; k = k + 1) begin
+        b_w[k] = b_r[k];
+    end
+    for (m = 0; m<4; m = m + 1) begin
+        a_rowused_w[m] = a_rowused_r[m];
+        a_rowload_w[m] = a_rowload_r[m];
+    end
+
     stream_cnt_w = stream_cnt_r;
     comp_valid_w = 0;
-    for (i = 0; i<16; i = i + 1) begin
-        b_w[i] = b_r[i];
-    end
-    for (i = 0; i<4; i = i + 1) begin
-        a_rowused_w[i] = a_rowused_r[i];
-        a_rowload_w[i] = a_rowload_r[i];
-    end
 
     if (ss_tvalid) begin
         stream_cnt_w = stream_cnt_r + 1;
@@ -188,18 +191,21 @@ end
 
 // data stream out
 always @(*) begin
-    for (i = 0; i<16; i = i + 1) begin
-        out_w[i] = out_r[i];
-        out_valid_w[i] = out_valid_r[i];
+
+    // idk why here need to use a different integer...
+    for (j = 0; j<16; j = j + 1) begin
+        out_w[j] = out_r[j];
+        out_valid_w[j] = out_valid_r[j];
     end
-    sm_tvalid = 0;
 
     if (comp_valid_r) begin
         out_w[stream_cnt_r - 21] = mul_out;
         out_valid_w[stream_cnt_r - 21] = 1;
     end
+
+    sm_tvalid = 0;
     out_cnt_w = out_cnt_r;
-    sm_tvalid_w = 0;
+
     sm_tdata = out_r[out_cnt_r];
 
     if (out_valid_r[out_cnt_r]) begin
@@ -224,7 +230,18 @@ always @(posedge axis_clk or negedge axis_rst_n) begin
         for (i = 0; i < 16; i = i + 1) begin
             out_valid_r[i] <= 0;
         end
-    end else begin
+        for (i = 0; i < 4; i = i + 1) begin
+            a_rowused_r[i] <= 0;
+            a_rowload_r[i] <= 0;
+        end
+        for (i = 0; i < 16; i = i + 1) begin
+            b_r[i] <= 0;
+        end
+        for (i = 0; i < 16; i = i + 1) begin
+            out_r[i] <= 0;
+        end
+    end
+    else begin
         ap_done_r <= ap_done_w;
         ap_idle_r <= ap_idle_w;
         ap_start_r <= ap_start_w;
@@ -235,21 +252,19 @@ always @(posedge axis_clk or negedge axis_rst_n) begin
         for (i = 0; i < 16; i = i + 1) begin
             out_valid_r[i] <= out_valid_w[i];
         end
+        for (i = 0; i < 4; i = i + 1) begin
+            a_rowused_r[i] <= a_rowused_w[i];
+            a_rowload_r[i] <= a_rowload_w[i];
+        end
+        for (i = 0; i < 16; i = i + 1) begin
+            b_r[i] <= b_w[i];
+        end
+        for (i = 0; i < 16; i = i + 1) begin
+            out_r[i] <= out_w[i];
+        end
     end
 end
 
-always @(posedge axis_clk) begin
-    for (i = 0; i < 4; i = i + 1) begin
-        a_rowused_r[i] <= a_rowused_w[i];
-        a_rowload_r[i] <= a_rowload_w[i];
-    end
-    for (i = 0; i < 16; i = i + 1) begin
-        b_r[i] <= b_w[i];
-    end
-    for (i = 0; i < 16; i = i + 1) begin
-        out_r[i] <= out_w[i];
-    end
-end
 
 endmodule
 
