@@ -24,7 +24,7 @@ int* __attribute__ ( ( section ( ".mprjram" ) ) ) fir(){
 	// reg_mprj_datal = 0xA3000000;
 	volatile int32_t* ptr = COEF_PTR;
 
-	for(int i=0; i< 11; i++){
+	for(int i=0; i< N; i++){
 		*(ptr + i) = taps[i];
 	}
 	// // coef read check
