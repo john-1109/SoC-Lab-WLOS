@@ -70,7 +70,7 @@ always@(*)begin
     endcase
 end
 
-exmem exmem(
+exmem_pipeline exmem(
     .wb_clk_i       (wb_clk_i   ),
     .wb_rst_i       (wb_rst_i   ),
     .wb_valid       (decode[0]  ),              
