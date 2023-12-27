@@ -15,7 +15,10 @@
 -v ../../rtl/user/qsort_wrapper.v
 -v ../../rtl/user/WB_Decode.v
 -v ../../rtl/user/user_project_wlos_wp.v 
--v ../../rtl/user/exmem_pipeline.v 
+##-v ../../rtl/user/exmem_pipeline.v 
+-v ../../rtl/user/exmem.v 
+-v ../../rtl/user/sdram_controller.v
+-v ../../rtl/user/sdr.v
 -v ../../rtl/user/bram.v
 -v ../../rtl/user/bram11.v
 ##-v ../../rtl/user/bram12.v
