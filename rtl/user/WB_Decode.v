@@ -11,6 +11,10 @@ module WB_Decode(
     output wire wbs_ack_o,
     output wire [31:0] wbs_dat_o,
 
+    input  [127:0] la_data_in,
+    output [127:0] la_data_out,
+    input  [127:0] la_oenb,
+    
     input wire [37:0] io_in,
     output wire [37:0] io_out,
     output wire [37:0] io_oeb,
@@ -70,7 +74,7 @@ always@(*)begin
     endcase
 end
 
-exmem_pipeline exmem(
+exmem exmem(
     .wb_clk_i       (wb_clk_i   ),
     .wb_rst_i       (wb_rst_i   ),
     .wb_valid       (decode[0]  ),              
@@ -79,7 +83,13 @@ exmem_pipeline exmem(
     .wbs_dat_i      (wbs_dat_i  ),              
     .wbs_adr_i      (wbs_adr_i  ),              
     .wbs_ack_o      (bram_ack_o ),              
-    .wbs_dat_o      (bram_dat_o )                 
+    .wbs_dat_o      (bram_dat_o ),
+    .la_data_in      (la_data_in),
+    .la_data_out    (la_data_out),
+    .la_oenb            (la_oenb),
+    .io_in                (io_in),
+    .io_out              (io_out),
+    .io_oeb              (io_oeb)
 );
 
 uart uart_ip(
