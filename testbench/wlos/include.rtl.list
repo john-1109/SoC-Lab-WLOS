@@ -3,6 +3,7 @@
 -v ../../rtl/header/user_defines.v
 
 ## User project
+-v ../../rtl/user/sync_fifo.v
 -v ../../rtl/user/uart.v
 -v ../../rtl/user/uart_tx.v
 -v ../../rtl/user/uart_rx.v 

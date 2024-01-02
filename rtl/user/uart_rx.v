@@ -17,12 +17,92 @@ module uart_receive (
   parameter WAIT_READ   = 4'b0100;
   parameter FRAME_ERR   = 4'b0101;
   parameter IRQ         = 4'b0110;
+  parameter STORE_DATA  = 4'b0111;
 
-  reg [3:0] state;
+  reg  [31:0] clk_cnt;
 
-  reg [31:0] clk_cnt;
+  reg  [3:0] state;
+  reg  [2:0] rx_index;
+  reg  [7:0] buf_data;
 
-  reg [2:0] rx_index;
+  reg        fifo_ivalid;
+  wire       fifo_iready;
+  wire       fifo_ifulln;  // FIFO not full
+  reg  [7:0] fifo_idata;
+  wire       fifo_ovalid;
+  reg        fifo_oready;
+  wire [7:0] fifo_odata;
+  wire       fifo_empty;
+
+  reg  [7:0] fifo_counter;
+  wire       timeout_flag;
+  localparam TIMEOUT = 5;
+
+  assign timeout_flag = (fifo_counter >= TIMEOUT);
+  
+  sync_fifo # (
+      .DATA_WIDTH (8),
+      .FIFO_DEPTH (8),
+      .FULL_THRES (6)
+  ) rx_fifo_inst (
+      .clk    (clk         ),
+      .rst_n  (rst_n       ),
+      .ivalid (fifo_ivalid ),
+      .iready (fifo_iready ),
+      .ifulln (fifo_ifulln ),  // FIFO not full
+      .idata  (fifo_idata  ),
+      .ovalid (fifo_ovalid ),
+      .oready (fifo_oready ),
+      .odata  (fifo_odata  ),
+      .empty  (fifo_empty  )
+  );
+
+  always @(*) begin
+    fifo_ivalid = 1'b0;
+    fifo_idata  = 8'b0;
+    fifo_oready = 1'b0;
+
+    case (state)
+      STORE_DATA: begin
+        // check if FIFO is not full
+        if (fifo_ifulln) begin
+          fifo_ivalid = 1'b1;
+          fifo_idata  = buf_data;
+        end
+        else begin
+          fifo_ivalid = 1'b0;
+          fifo_idata  = 8'b0;
+        end
+      end
+      IRQ: begin
+        fifo_oready = 1'b1;
+      end
+      default: begin
+        fifo_ivalid = 1'b0;
+        fifo_idata  = 8'b0;
+        fifo_oready = 1'b0;
+      end
+    endcase
+  end
+
+  always @(posedge clk or negedge rst_n) begin
+    if(!rst_n) begin
+      fifo_counter <= 0;
+    end
+    else begin
+      if (state == WAIT) begin
+        if (clk_cnt == (clk_div - 1)) begin
+          fifo_counter <= fifo_counter + 1;
+        end
+        else begin
+          fifo_counter <= fifo_counter;
+        end
+      end
+      else begin
+        fifo_counter <= 0;
+      end
+    end
+  end
 
   always @(posedge clk or negedge rst_n) begin
     if(!rst_n) begin
@@ -33,16 +113,33 @@ module uart_receive (
       frame_err <= 1'b0;
       rx_data   <= 8'h0;
       busy      <= 1'b0;
-    end else begin
+      buf_data  <= 8'h0;
+    end
+    else begin
       case(state)
         WAIT: begin
           irq <= 1'b0;
           frame_err <= 1'b0;
           busy <= 1'b0;
           rx_data <= 8'b0;
-          if(rx == 1'b0) begin // Start bit detected
-            state <= START_BIT;
+          if (timeout_flag && ~fifo_empty) begin  // timeout
+            state <= IRQ;
+            clk_cnt <= 32'h0000_0000;
           end
+          else if (rx == 1'b0) begin  // Start bit detected
+            state <= START_BIT;
+            clk_cnt <= 32'h0000_0000;
+          end
+          else begin
+            // clk_cnt used for fifo_counter
+            if (clk_cnt == (clk_div - 1)) begin
+              clk_cnt <= 32'h0000_0000;
+            end
+            else begin
+              clk_cnt <= clk_cnt + 32'h0000_0001;
+            end
+          end
+          buf_data <= 8'b0;
         end
         START_BIT: begin
           // Check middle of start bit to make sure it's still low
@@ -64,7 +161,7 @@ module uart_receive (
               state <= STOP_BIT;
             end
             rx_index <= rx_index + 3'b001;
-            rx_data[rx_index] <= rx;
+            buf_data[rx_index] <= rx;
             //$display("rx data bit index:%d %b", rx_index, rx_data[rx_index]);
           end else begin
             clk_cnt <= clk_cnt + 32'h0000_0001;
@@ -76,7 +173,7 @@ module uart_receive (
           if(clk_cnt == (clk_div - 1)) begin
             clk_cnt <= 32'h0000_0000;
             if(rx == 1'b1) begin
-              state <= IRQ;//WAIT_READ;
+              state <= STORE_DATA;  // IRQ;
               frame_err <= 1'b0;
             end else begin
               state <= FRAME_ERR;
@@ -87,24 +184,31 @@ module uart_receive (
           end
           busy <= 1'b1;
         end
-        IRQ:begin
-          irq <= 1'b1;
-          state <= WAIT_READ;
-          busy <= 1'b0;
+        STORE_DATA: begin
+          irq  <= 1'b0;
+          busy <= 1'b1;
+          // check if FIFO is ready
+          state <= (fifo_iready) ? WAIT : IRQ;
+        end
+        IRQ: begin
+          irq     <= 1'b1;
+          state   <= WAIT_READ;
+          busy    <= 1'b0;
+          rx_data <= (fifo_ovalid & fifo_oready) ? fifo_odata : buf_data;
         end
         WAIT_READ: begin
-          irq <= 1'b0;
+          irq  <= 1'b0;
           busy <= 1'b0;
           if(rx_finish)
             state <= WAIT;
           else
             state <= WAIT_READ;
         end
-        FRAME_ERR:begin
-            state <= WAIT;
-            irq <= 0;
+        FRAME_ERR: begin
+            state     <= WAIT;
+            irq       <= 0;
             frame_err <= 0;
-            busy <= 1'b0;
+            busy      <= 1'b0;
         end
         default: begin
           state     <= WAIT;
@@ -114,6 +218,7 @@ module uart_receive (
           rx_data   <= 8'h0;
           frame_err <= 1'b0;
           busy      <= 1'b0;
+          buf_data  <= 8'h0;
         end
       endcase
     end
