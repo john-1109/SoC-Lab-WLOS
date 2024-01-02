@@ -27,7 +27,7 @@ extern void uart_write();
 extern void uart_write_char();
 extern void uart_write_string();
 extern int uart_isr();
-extern int uart_read();
+extern int* uart_read();
 extern int* matmul();
 extern int* fir();
 extern int* qsort();

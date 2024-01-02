@@ -23,6 +23,11 @@ module uart_transmission(
 
   reg [1:0] detect_posedge_start;
 
+  reg [7:0] tx_data_buf;
+  reg [7:0] tx_data_r;
+
+
+
   always @(posedge clk or negedge rst_n)begin
     if(!rst_n) 
       detect_posedge_start <= 2'b00;
@@ -39,14 +44,19 @@ module uart_transmission(
       clk_cnt   <= 32'h0000_0000;
       //detect_posedge_start <= 2'b00;
       busy      <= 1'b0;
+      tx_data_buf <= 8'h00;
+      tx_data_r <= 8'h00;
     end else begin
       //detect_posedge_start <= {detect_posedge_start[0], tx_start}; 
+      tx_data_buf <= tx_data_buf;
+      tx_data_r <= tx_data;
       case(state)
         WAIT: begin
           tx <= 1'b1;
           clear_req <= 1'b0;
           if(detect_posedge_start == 2'b01) begin
             state <= START_BIT;
+            tx_data_buf <= tx_data_r;
           end
         end
         START_BIT: begin
@@ -61,7 +71,7 @@ module uart_transmission(
           end
         end
         SEND_DATA: begin
-          tx <= tx_data[tx_index];
+          tx <= tx_data_buf[tx_index];
           busy <= 1'b1;
           if(clk_cnt == (clk_div - 1)) begin
             clk_cnt <= 32'h0000_0000;

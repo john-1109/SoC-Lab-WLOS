@@ -12,15 +12,14 @@
 
 module sync_fifo # (
     parameter DATA_WIDTH = 8,
-    parameter FIFO_DEPTH = 8,
-    parameter FULL_THRES = (FIFO_DEPTH-1)
+    parameter FULL_THRES = 3,
+    parameter FIFO_DEPTH = (FULL_THRES + 3)
 )
 (
     input  wire                  clk,
     input  wire                  rst_n,
     input  wire                  ivalid,
     output wire                  iready,
-    output wire                  ifulln,  // FIFO not full
     input  wire [DATA_WIDTH-1:0] idata,
     output wire                  ovalid,
     input  wire                  oready,
@@ -41,19 +40,16 @@ module sync_fifo # (
     reg [DATA_WIDTH-1:0] odata_r, odata_w;
     assign odata = odata_r;
 
-    reg ifulln_r, ifulln_w;
     reg iready_r, iready_w;
     reg ovalid_r, ovalid_w;
-    assign ifulln = ifulln_r;
     assign iready = iready_r;
     assign ovalid = ovalid_r;
 
     always @(*) begin
-        iptr_w   = (ivalid & ifulln) ? ((iptr_r == (FIFO_DEPTH - 1)) ? 0 : iptr_r + 1) : iptr_r;
+        iptr_w   = (ivalid) ? ((iptr_r == (FIFO_DEPTH - 1)) ? 0 : iptr_r + 1) : iptr_r;
         optr_w   = (ovalid & oready) ? ((optr_r == (FIFO_DEPTH - 1)) ? 0 : optr_r + 1) : optr_r;
         size_w   = (iptr_w >= optr_w) ? (iptr_w - optr_w) : (FIFO_DEPTH - optr_w + iptr_w);
-        ifulln_w = (size_w < (FIFO_DEPTH-1));
-        iready_w = (size_w < FULL_THRES);      // assert not ready before FIFO becomes full
+        iready_w = (size_w < FULL_THRES);
         ovalid_w = (size_r != 0) && !((size_r == 1) && (ovalid && oready));
         odata_w  = mem_r[optr_w];
     end
@@ -62,7 +58,6 @@ module sync_fifo # (
             iptr_r   <= 0;
             optr_r   <= 0;
             size_r   <= 0;
-            ifulln_r <= 0;
             iready_r <= 0;
             ovalid_r <= 0;
             odata_r  <= 0;
@@ -71,7 +66,6 @@ module sync_fifo # (
             iptr_r   <= iptr_w;
             optr_r   <= optr_w;
             size_r   <= size_w;
-            ifulln_r <= ifulln_w;
             iready_r <= iready_w;
             ovalid_r <= ovalid_w;
             odata_r  <= odata_w;
@@ -82,7 +76,7 @@ module sync_fifo # (
         for (i = 0; i < FIFO_DEPTH; i = i + 1) begin
             mem_w[i] = mem_r[i];
         end
-        if (ivalid & ifulln) begin  // push data into FIFO if FIFO is not full
+        if (ivalid) begin
             mem_w[iptr_r] = idata;
         end
     end

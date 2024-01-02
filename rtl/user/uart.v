@@ -44,7 +44,6 @@ module uart #(
   // CSR
   wire [7:0] rx_data; 
   wire irq_en;
-  wire rx_finish;
   wire rx_busy;
   wire [7:0] tx_data;
   wire tx_start_clear;
@@ -52,6 +51,9 @@ module uart #(
   wire tx_busy;
   //wire wb_valid;
   wire frame_err;
+  wire rx_valid;
+  wire rx_full;
+  wire rx_empty;
   
   // 32'h3000_0000 memory regions of user project  
   //assign wb_valid = (wbs_adr_i[31:8] == 32'h3000_00) ? wbs_cyc_i && wbs_stb_i : 1'b0;
@@ -65,10 +67,12 @@ module uart #(
     .clk_div    (clk_div    ),
     .rx         (rx         ),
     .rx_data    (rx_data    ),
-    .rx_finish  (rx_finish  ),	// data receive finish
     .irq        (irq        ),
     .frame_err  (frame_err  ),
-    .busy       (rx_busy    )
+    .busy       (rx_busy    ),
+    .i_rx_valid (rx_valid   ),
+    .o_rx_full  (rx_full    ),
+    .o_rx_empty (rx_empty   )
   );
 
   uart_transmission transmission(
@@ -96,11 +100,13 @@ module uart #(
   .i_irq    (irq      ),
   .i_frame_err  (frame_err),
   .i_rx_busy    (rx_busy  ),
-	.o_rx_finish  (rx_finish),
 	.o_tx		      (tx_data	),
 	.i_tx_start_clear(tx_start_clear), 
   .i_tx_busy    (tx_busy  ),
-	.o_tx_start	  (tx_start )
+	.o_tx_start	  (tx_start ),
+  .o_rx_valid  (rx_valid ),
+  .i_rx_full  (rx_full),
+  .i_rx_empty (rx_empty)
   );
 
 endmodule

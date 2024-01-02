@@ -7,7 +7,7 @@
 #include <user_uart.h>
 #include <defs.h>
 
-extern int uart_read();
+extern int* uart_read();
 extern char uart_read_char();
 extern char uart_write_char();
 extern int uart_write();
@@ -30,7 +30,7 @@ void isr(void)
 
 #else
     uint32_t irqs = irq_pending() & irq_getmask();
-    int buf;
+    int* buf;
 
     if ( irqs & (1 << USER_IRQ_0_INTERRUPT)) {
         user_irq_0_ev_pending_write(1); //Clear Interrupt Pending Event

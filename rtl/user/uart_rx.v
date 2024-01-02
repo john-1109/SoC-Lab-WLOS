@@ -4,10 +4,12 @@ module uart_receive (
   input wire [31:0] clk_div,
   input wire        rx,
   output reg        irq,
-  output reg [7:0]  rx_data,
-  input wire        rx_finish,
+  output wire [7:0]  rx_data,
   output reg        frame_err,
-  output reg        busy
+  output reg        busy,
+  input wire        i_rx_valid,
+  output wire       o_rx_full,
+  output wire       o_rx_empty
 );
 
   parameter WAIT        = 4'b0000;
@@ -17,211 +19,174 @@ module uart_receive (
   parameter WAIT_READ   = 4'b0100;
   parameter FRAME_ERR   = 4'b0101;
   parameter IRQ         = 4'b0110;
-  parameter STORE_DATA  = 4'b0111;
+  parameter FIFO   = 4'b0111;
 
-  reg  [31:0] clk_cnt;
+  localparam WAIT_IRQ = 50000;
 
-  reg  [3:0] state;
-  reg  [2:0] rx_index;
-  reg  [7:0] buf_data;
+  reg [3:0] state_w, state_r;
 
-  reg        fifo_ivalid;
-  wire       fifo_iready;
-  wire       fifo_ifulln;  // FIFO not full
-  reg  [7:0] fifo_idata;
-  wire       fifo_ovalid;
-  reg        fifo_oready;
+  reg [31:0] clk_cnt_w, clk_cnt_r;
+
+  reg [2:0] rx_index_w, rx_index_r;
+
+  reg irq_w;
+  reg frame_err_w;
+  reg busy_w;
+  reg [7:0] rx_data_w, rx_data_r;
+
+  reg fifo_ivalid;
+  wire fifo_full_b, fifo_full;
+  reg [7:0] fifo_idata;
+  wire fifo_ovalid;
+  wire fifo_oready;
   wire [7:0] fifo_odata;
-  wire       fifo_empty;
+  wire fifo_empty;
 
-  reg  [7:0] fifo_counter;
-  wire       timeout_flag;
-  localparam TIMEOUT = 5;
+  reg [31:0] wait_cnt_w, wait_cnt_r;
 
-  assign timeout_flag = (fifo_counter >= TIMEOUT);
-  
-  sync_fifo # (
-      .DATA_WIDTH (8),
-      .FIFO_DEPTH (8),
-      .FULL_THRES (6)
-  ) rx_fifo_inst (
-      .clk    (clk         ),
-      .rst_n  (rst_n       ),
-      .ivalid (fifo_ivalid ),
-      .iready (fifo_iready ),
-      .ifulln (fifo_ifulln ),  // FIFO not full
-      .idata  (fifo_idata  ),
-      .ovalid (fifo_ovalid ),
-      .oready (fifo_oready ),
-      .odata  (fifo_odata  ),
-      .empty  (fifo_empty  )
-  );
+  assign fifo_oready = i_rx_valid;
+  assign rx_data = fifo_odata;
+  assign fifo_full = !fifo_full_b;
+  assign o_rx_full = fifo_full;
+  assign o_rx_empty = fifo_empty;
 
-  always @(*) begin
-    fifo_ivalid = 1'b0;
-    fifo_idata  = 8'b0;
-    fifo_oready = 1'b0;
+  sync_fifo  rx_fifo(
+    .clk(clk),
+    .rst_n(rst_n),
+    .ivalid(fifo_ivalid),
+    .iready(fifo_full_b),
+    .idata(fifo_idata),
+    .ovalid(fifo_ovalid),
+    .oready(fifo_oready),
+    .odata(fifo_odata),
+    .empty(fifo_empty)
+);
 
-    case (state)
-      STORE_DATA: begin
-        // check if FIFO is not full
-        if (fifo_ifulln) begin
-          fifo_ivalid = 1'b1;
-          fifo_idata  = buf_data;
-        end
-        else begin
-          fifo_ivalid = 1'b0;
-          fifo_idata  = 8'b0;
-        end
+
+always @(*) begin
+  state_w     = state_r;
+  clk_cnt_w   = clk_cnt_r;
+  rx_index_w  = rx_index_r;
+  irq_w       = irq;
+  rx_data_w   = rx_data_r;
+  frame_err_w = frame_err;
+  busy_w      = busy;
+  fifo_ivalid = 1'b0;
+  fifo_idata  = 8'h0;
+  wait_cnt_w  = wait_cnt_r;
+  case(state_r)
+    WAIT: begin
+      irq_w = 1'b0;
+      frame_err_w = 1'b0;
+      busy_w = 1'b0;
+      rx_data_w = 8'b0;
+      wait_cnt_w = wait_cnt_r + 1;
+      if(rx == 1'b0) begin // Start bit detected
+        state_w = START_BIT;
+        wait_cnt_w = 32'h0000_0000;
       end
-      IRQ: begin
-        fifo_oready = 1'b1;
-      end
-      default: begin
-        fifo_ivalid = 1'b0;
-        fifo_idata  = 8'b0;
-        fifo_oready = 1'b0;
-      end
-    endcase
-  end
 
-  always @(posedge clk or negedge rst_n) begin
-    if(!rst_n) begin
-      fifo_counter <= 0;
+      else if (wait_cnt_r == WAIT_IRQ && !fifo_empty) begin
+        state_w = IRQ;
+        wait_cnt_w = 32'h0000_0000;
+      end
     end
-    else begin
-      if (state == WAIT) begin
-        if (clk_cnt == (clk_div - 1)) begin
-          fifo_counter <= fifo_counter + 1;
+    START_BIT: begin
+      // Check middle of start bit to make sure it's still low
+      if(clk_cnt_r == ((clk_div >> 1) - 1)) begin
+        clk_cnt_w = 32'h0000_0000;
+        if(rx == 1'b0) begin
+          state_w = GET_DATA;
         end
-        else begin
-          fifo_counter <= fifo_counter;
+      end else begin
+        clk_cnt_w = clk_cnt_r + 32'h0000_0001;
+      end
+      busy_w = 1'b1;
+    end
+    GET_DATA: begin
+      // Wait CLKS_PER_BIT-1 clock cycles to sample serial data
+      if(clk_cnt_r == (clk_div - 1)) begin
+        clk_cnt_w = 32'h0000_0000;
+        if(rx_index_r == 3'b111) begin
+          state_w = STOP_BIT;
         end
+        rx_index_w = rx_index_r + 3'b001;
+        rx_data_r[rx_index_r] <= rx;
+        //$display("rx data bit index:%d %b", rx_index, rx_data_r[rx_index]);
+      end else begin
+        clk_cnt_w = clk_cnt_r + 32'h0000_0001;
+      end
+      busy_w = 1'b1;
+    end
+    STOP_BIT: begin
+      // Receive Stop bit.  Stop bit = 1
+      if(clk_cnt_r == (clk_div - 1)) begin
+        clk_cnt_w = 32'h0000_0000;
+        if(rx == 1'b1) begin
+          state_w = FIFO;//WAIT_READ;
+          frame_err_w = 1'b0;
+          fifo_idata  = rx_data_r;
+          fifo_ivalid = 1'b1;
+        end else begin
+          state_w = FRAME_ERR;
+          frame_err_w = 1'b1;
+        end
+      end else begin
+        clk_cnt_w = clk_cnt_r + 32'h0000_0001;
+      end
+      busy_w = 1'b1;
+    end
+    IRQ:begin
+      irq_w = 1'b1;
+      state_w = WAIT;
+      busy_w = 1'b0;
+    end
+    FIFO:begin
+      if(fifo_full) begin
+        state_w = IRQ;
       end
       else begin
-        fifo_counter <= 0;
+        state_w = WAIT;
       end
     end
-  end
+    FRAME_ERR:begin
+        state_w = WAIT;
+        irq_w = 0;
+        frame_err_w = 0;
+        busy_w = 1'b0;
+    end
+    default: begin
+      state_w     = WAIT;
+      clk_cnt_w   = 32'h0000_0000;
+      rx_index_w  = 3'b000;
+      irq_w       = 1'b0;
+      rx_data_w   = 8'h0;
+      frame_err_w = 1'b0;
+      busy_w      = 1'b0;
+    end
+  endcase
+end
 
   always @(posedge clk or negedge rst_n) begin
     if(!rst_n) begin
-      state     <= WAIT;
-      clk_cnt   <= 32'h0000_0000;
-      rx_index  <= 3'b000;
+      state_r     <= WAIT;
+      clk_cnt_r   <= 32'h0000_0000;
+      rx_index_r  <= 3'b000;
       irq       <= 1'b0;
       frame_err <= 1'b0;
-      rx_data   <= 8'h0;
+      rx_data_r   <= 8'h0;
       busy      <= 1'b0;
-      buf_data  <= 8'h0;
+      wait_cnt_r  <= 32'h0000_0000;
+    end else begin
+      state_r     <= state_w;
+      clk_cnt_r   <= clk_cnt_w;
+      rx_index_r  <= rx_index_w;
+      irq         <= irq_w;
+      rx_data_r     <= rx_data_w;
+      frame_err   <= frame_err_w;
+      busy        <= busy_w;
+      wait_cnt_r  <= wait_cnt_w;
     end
-    else begin
-      case(state)
-        WAIT: begin
-          irq <= 1'b0;
-          frame_err <= 1'b0;
-          busy <= 1'b0;
-          rx_data <= 8'b0;
-          if (timeout_flag && ~fifo_empty) begin  // timeout
-            state <= IRQ;
-            clk_cnt <= 32'h0000_0000;
-          end
-          else if (rx == 1'b0) begin  // Start bit detected
-            state <= START_BIT;
-            clk_cnt <= 32'h0000_0000;
-          end
-          else begin
-            // clk_cnt used for fifo_counter
-            if (clk_cnt == (clk_div - 1)) begin
-              clk_cnt <= 32'h0000_0000;
-            end
-            else begin
-              clk_cnt <= clk_cnt + 32'h0000_0001;
-            end
-          end
-          buf_data <= 8'b0;
-        end
-        START_BIT: begin
-          // Check middle of start bit to make sure it's still low
-          if(clk_cnt == ((clk_div >> 1) - 1)) begin
-            clk_cnt <= 32'h0000_0000;
-            if(rx == 1'b0) begin
-              state <= GET_DATA;
-            end
-          end else begin
-            clk_cnt <= clk_cnt + 32'h0000_0001;
-          end
-          busy <= 1'b1;
-        end
-        GET_DATA: begin
-          // Wait CLKS_PER_BIT-1 clock cycles to sample serial data
-          if(clk_cnt == (clk_div - 1)) begin
-            clk_cnt <= 32'h0000_0000;
-            if(rx_index == 3'b111) begin
-              state <= STOP_BIT;
-            end
-            rx_index <= rx_index + 3'b001;
-            buf_data[rx_index] <= rx;
-            //$display("rx data bit index:%d %b", rx_index, rx_data[rx_index]);
-          end else begin
-            clk_cnt <= clk_cnt + 32'h0000_0001;
-          end
-          busy <= 1'b1;
-        end
-        STOP_BIT: begin
-          // Receive Stop bit.  Stop bit = 1
-          if(clk_cnt == (clk_div - 1)) begin
-            clk_cnt <= 32'h0000_0000;
-            if(rx == 1'b1) begin
-              state <= STORE_DATA;  // IRQ;
-              frame_err <= 1'b0;
-            end else begin
-              state <= FRAME_ERR;
-              frame_err <= 1'b1;
-            end
-          end else begin
-            clk_cnt <= clk_cnt + 32'h0000_0001;
-          end
-          busy <= 1'b1;
-        end
-        STORE_DATA: begin
-          irq  <= 1'b0;
-          busy <= 1'b1;
-          // check if FIFO is ready
-          state <= (fifo_iready) ? WAIT : IRQ;
-        end
-        IRQ: begin
-          irq     <= 1'b1;
-          state   <= WAIT_READ;
-          busy    <= 1'b0;
-          rx_data <= (fifo_ovalid & fifo_oready) ? fifo_odata : buf_data;
-        end
-        WAIT_READ: begin
-          irq  <= 1'b0;
-          busy <= 1'b0;
-          if(rx_finish)
-            state <= WAIT;
-          else
-            state <= WAIT_READ;
-        end
-        FRAME_ERR: begin
-            state     <= WAIT;
-            irq       <= 0;
-            frame_err <= 0;
-            busy      <= 1'b0;
-        end
-        default: begin
-          state     <= WAIT;
-          clk_cnt   <= 32'h0000_0000;
-          rx_index  <= 3'b000;
-          irq       <= 1'b0;
-          rx_data   <= 8'h0;
-          frame_err <= 1'b0;
-          busy      <= 1'b0;
-          buf_data  <= 8'h0;
-        end
-      endcase
     end
-  end
 
 endmodule

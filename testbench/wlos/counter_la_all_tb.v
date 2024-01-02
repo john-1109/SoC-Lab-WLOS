@@ -145,7 +145,7 @@ module counter_la_all_tb;
 
 		// Repeat cycles of 1000 clock edges as needed to complete testbench
 		repeat (20000) begin  // wait longer for UART 
-			repeat (500) @(posedge clock);
+			repeat (1000) @(posedge clock);
 			// $display("+1000 cycles");
 		end
 		$display("%c[1;31m",27);
@@ -224,14 +224,18 @@ module counter_la_all_tb;
 		$display("fir passed\n");
 		
 		$display("UART started");
-		send_data_2;
-		#250000;      // wait for UART
-		send_data_1;
-		//uart_send_data(8'h30);
-		//uart_send_data(8'h41);
-		//uart_send_data(8'h61);
-		#10000;
-		#5000000;     // wait for UART
+		// send_data_2;
+		// #250000;      // wait for UART
+		// send_data_1;
+		uart_send_data(8'h01);
+		uart_send_data(8'h02);
+		uart_send_data(8'h03);
+		uart_send_data(8'h04);
+		uart_send_data(8'h05);
+		//uart_send_data(8'h06);
+		#1500000;
+		#1500000;
+		#1500000;
 		$display("LA Test 1 passed");
 		$finish;
 	end
@@ -270,7 +274,7 @@ module counter_la_all_tb;
 		wait(!tx_busy);
 		tx_start = 0;
 		$display("uart tx completed");
-		#1500000;  // wait longer for UART 
+		#110000;
 	end endtask
 	
 	initial begin
