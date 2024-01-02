@@ -59,8 +59,8 @@ module exmem #(
     assign ctrl_addr = wbs_adr_i[24:0];
 
     // IO
-    assign io_out = d2c_data;
-    assign io_oeb = {(`MPRJ_IO_PADS-1){rst}};
+    // assign io_out = d2c_data;
+    // assign io_oeb = {(`MPRJ_IO_PADS-1){rst}};
 
     // IRQ
     assign irq = 3'b000;	// Unused
