@@ -36,10 +36,14 @@ int* __attribute__ ( ( section ( ".mprjram" ) ) ) fir(){
 	FIR_CTRL = 0x00000001; //ap_start
 	// reg_mprj_datal = 0xA30F0000;
 
-	for(int i = 1; i <= SEQ_LEN; i = i + 1) {
+	int fir_output;
+	FIR_X = 1;
+	for(int i = 2; i <= SEQ_LEN; i = i + 1) {
+	    fir_output = FIR_Y;
 	    FIR_X = i;
-	    outputsignal[i-1] = FIR_Y;
+	    outputsignal[i-2] = fir_output;
 	}
+	outputsignal[SEQ_LEN-1] = FIR_Y;
 
 	return outputsignal;
 }
