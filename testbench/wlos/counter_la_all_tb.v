@@ -274,7 +274,8 @@ module counter_la_all_tb;
 		wait(!tx_busy);
 		tx_start = 0;
 		$display("uart tx completed");
-		#110000;
+		//#110000;
+		#8700;
 	end endtask
 	
 	initial begin
