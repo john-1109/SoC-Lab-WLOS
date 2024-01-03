@@ -34,14 +34,22 @@ module counter_la_all_tb;
 	wire tx_busy;
 	wire tx_clear_req;
 
+	integer wait_time,send_time;
+
 	assign checkbits  = mprj_io[31:16];
 	assign uart_tx = mprj_io[6];
 	assign mprj_io[5] = uart_rx;
 
 	always #12.5 clock <= (clock === 1'b0);
+	reg [31:0] clk_cnt;
 
 	initial begin
 		clock = 0;
+		clk_cnt = 0;
+	end
+
+	always @(posedge clock) begin
+		clk_cnt <= clk_cnt + 1;
 	end
 
 	`ifdef ENABLE_SDF
@@ -158,6 +166,8 @@ module counter_la_all_tb;
 		$finish;
 	end
 
+	
+
 	initial begin
 		wait(checkbits == 16'hAB50);
 		$display("LA Test 1 started");
@@ -186,6 +196,7 @@ module counter_la_all_tb;
 		$display("qsort passed\n");
 
 		// matrix multiplication
+		clk_cnt = 0;
 		wait(checkbits == 16'h003E);
 		$display("Call function matmul() in User Project BRAM return value passed, 0x%x", checkbits);
 		wait(checkbits == 16'h0044);
@@ -195,6 +206,7 @@ module counter_la_all_tb;
 		wait(checkbits == 16'h0050);
 		$display("Call function matmul() in User Project BRAM return value passed, 0x%x", checkbits);
 		$display("matmul passed\n");
+		$display("matmul use %d clock cycles", clk_cnt);
 		
 		
 		
@@ -227,15 +239,21 @@ module counter_la_all_tb;
 		// send_data_2;
 		// #250000;      // wait for UART
 		// send_data_1;
-		uart_send_data(8'h01);
-		uart_send_data(8'h02);
-		uart_send_data(8'h03);
-		uart_send_data(8'h04);
-		uart_send_data(8'h05);
+
+		for (send_time = 0; send_time < 64; send_time = send_time + 1) begin
+			uart_send_data(send_time+1);
+			if (send_time%8 == 7) begin
+				$display("UART sent %d bytes", send_time+1);
+				wait(tbuart.recv_state == 1);
+			end
+		end
+		// uart_send_data(8'h01);
+		// uart_send_data(8'h02);
+		// uart_send_data(8'h03);
+		// uart_send_data(8'h04);
+		// uart_send_data(8'h05);
 		//uart_send_data(8'h06);
-		#1500000;
-		#1500000;
-		#1500000;
+		#500000;
 		$display("LA Test 1 passed");
 		$finish;
 	end

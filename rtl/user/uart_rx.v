@@ -9,7 +9,8 @@ module uart_receive (
   output reg        busy,
   input wire        i_rx_valid,
   output wire       o_rx_full,
-  output wire       o_rx_empty
+  output wire       o_rx_empty,
+  input wire        irq_clear
 );
 
   parameter WAIT        = 4'b0000;
@@ -21,8 +22,9 @@ module uart_receive (
   parameter IRQ         = 4'b0110;
   parameter FIFO   = 4'b0111;
 
-  localparam WAIT_IRQ = 50000;
-
+  //wire [31:0] WAIT_IRQ = clk_div * 20;
+  wire [31:0] WAIT_IRQ = clk_div * 20;
+  
   reg [3:0] state_w, state_r;
 
   reg [31:0] clk_cnt_w, clk_cnt_r;
@@ -50,6 +52,8 @@ module uart_receive (
   assign o_rx_full = fifo_full;
   assign o_rx_empty = fifo_empty;
 
+  reg irq_en_w, irq_en_r;
+
   sync_fifo  rx_fifo(
     .clk(clk),
     .rst_n(rst_n),
@@ -74,6 +78,7 @@ always @(*) begin
   fifo_ivalid = 1'b0;
   fifo_idata  = 8'h0;
   wait_cnt_w  = wait_cnt_r;
+  
   case(state_r)
     WAIT: begin
       irq_w = 1'b0;
@@ -86,7 +91,7 @@ always @(*) begin
         wait_cnt_w = 32'h0000_0000;
       end
 
-      else if (wait_cnt_r == WAIT_IRQ && !fifo_empty) begin
+      else if (wait_cnt_r == WAIT_IRQ && !fifo_empty && irq_en_r) begin
         state_w = IRQ;
         wait_cnt_w = 32'h0000_0000;
       end
@@ -142,7 +147,7 @@ always @(*) begin
       busy_w = 1'b0;
     end
     FIFO:begin
-      if(fifo_full) begin
+      if(fifo_full && irq_en_r) begin
         state_w = IRQ;
       end
       else begin
@@ -167,6 +172,17 @@ always @(*) begin
   endcase
 end
 
+always @(*) begin
+  irq_en_w = irq_en_r;
+  if(state_r == IRQ) begin
+    irq_en_w = 1'b0;
+  end 
+
+  if (irq_clear == 1'b1) begin
+    irq_en_w = 1'b1;
+  end
+end
+
   always @(posedge clk or negedge rst_n) begin
     if(!rst_n) begin
       state_r     <= WAIT;
@@ -177,6 +193,7 @@ end
       rx_data_r   <= 8'h0;
       busy      <= 1'b0;
       wait_cnt_r  <= 32'h0000_0000;
+      irq_en_r    <= 1'b1;
     end else begin
       state_r     <= state_w;
       clk_cnt_r   <= clk_cnt_w;
@@ -186,6 +203,7 @@ end
       frame_err   <= frame_err_w;
       busy        <= busy_w;
       wait_cnt_r  <= wait_cnt_w;
+      irq_en_r    <= irq_en_w;
     end
     end
 

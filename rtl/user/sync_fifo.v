@@ -12,8 +12,8 @@
 
 module sync_fifo # (
     parameter DATA_WIDTH = 8,
-    parameter FULL_THRES = 3,
-    parameter FIFO_DEPTH = (FULL_THRES + 3)
+    parameter FULL_THRES = 8,
+    parameter FIFO_DEPTH = (FULL_THRES * 2)
 )
 (
     input  wire                  clk,

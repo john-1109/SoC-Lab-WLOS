@@ -54,6 +54,7 @@ module uart #(
   wire rx_valid;
   wire rx_full;
   wire rx_empty;
+  wire irq_clear;
   
   // 32'h3000_0000 memory regions of user project  
   //assign wb_valid = (wbs_adr_i[31:8] == 32'h3000_00) ? wbs_cyc_i && wbs_stb_i : 1'b0;
@@ -72,7 +73,8 @@ module uart #(
     .busy       (rx_busy    ),
     .i_rx_valid (rx_valid   ),
     .o_rx_full  (rx_full    ),
-    .o_rx_empty (rx_empty   )
+    .o_rx_empty (rx_empty   ),
+    .irq_clear  (irq_clear  )
   );
 
   uart_transmission transmission(
@@ -106,7 +108,8 @@ module uart #(
 	.o_tx_start	  (tx_start ),
   .o_rx_valid  (rx_valid ),
   .i_rx_full  (rx_full),
-  .i_rx_empty (rx_empty)
+  .i_rx_empty (rx_empty),
+  .irq_clear  (irq_clear)
   );
 
 endmodule

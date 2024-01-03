@@ -18,7 +18,8 @@ module ctrl(
     output reg        o_tx_start,
     output reg        o_rx_valid,
     input wire        i_rx_full,
-    input wire        i_rx_empty
+    input wire        i_rx_empty,
+    output reg        irq_clear
 );
 
 // Declare the UART memory mapped registers address
@@ -92,6 +93,7 @@ always @(*) begin
     fifo_ivalid = 1'b0;
     fifo_idata = 8'h0;
     wb_pause_w = 0;
+    irq_clear = 0;
 
     if(i_wb_valid && !i_wb_we && !wb_pause_r)begin
         wb_pause_w = 1'b1;
@@ -120,6 +122,7 @@ always @(*) begin
         fifo_ivalid = 1'b1;
         fifo_idata = i_wb_dat[7:0];
         wb_pause_w = 1'b1;
+        irq_clear = 1'b1;
     end
 
 

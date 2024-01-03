@@ -48,15 +48,12 @@ char __attribute__ ( ( section ( ".mprj" ) ) ) uart_read_char()
 int* __attribute__ ( ( section ( ".mprj" ) ) ) uart_read()
 {
     int j = 0;
-    while ((reg_uart_stat) & 1) ; // wait rx empty = 0 (while rx empty = 1, do nothing)
     while ((((reg_uart_stat) & 1) == 0) && (j < FIFO_DEPTH)){ // while loop when rx_empty = 0 and j < FIFO_DEPTH
-        if((((reg_uart_stat>>5) | 0) == 0) && (((reg_uart_stat>>4) | 0) == 0)){ // if error = 0
-            for(int i = 0; i < 1; i++)
-                asm volatile ("nop");
+        for(int i = 0; i < 1; i++)
+            asm volatile ("nop");
 
-            UART_BUF[j] = reg_rx_data;
-            j++;
-        }
+        UART_BUF[j] = reg_rx_data;
+        j++;
     }
     while (j < FIFO_DEPTH){
         UART_BUF[j] = 0;

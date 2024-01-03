@@ -9,7 +9,7 @@
 #define reg_uart_stat        (*(volatile uint32_t*)0x30000008)
 #define reg_uart_clkdiv      (*(volatile uint32_t*)0x3000000c)
 
-#define FIFO_DEPTH 3
+#define FIFO_DEPTH 8
 extern int UART_BUF[FIFO_DEPTH];
 
 
