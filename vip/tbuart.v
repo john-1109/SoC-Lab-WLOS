@@ -26,18 +26,17 @@ module tbuart (
 
 	reg clk;
 
-	parameter R_WAIT 		= 3'b000;
+	parameter R_WAIT 	= 3'b000;
 	parameter R_GET_DATA  	= 3'b001;
 	parameter R_STOP_BIT	= 3'b010;
-	parameter T_WAIT		= 3'b000;
+	parameter T_WAIT	= 3'b000;
 	parameter T_START_BIT   = 3'b001;
 	parameter T_SEND_DATA	= 3'b010;
 	parameter T_STOP_BIT    = 3'b011;
 	parameter T_CLEAR       = 3'b100;
 	
-
-	parameter baud_rate = 9600;
-
+	parameter baud_rate = 115200;
+	parameter clk_period = 1000000000/(2*baud_rate);
 
 	initial begin
 		clk = 0;
@@ -57,7 +56,7 @@ module tbuart (
 		clk_cnt = 0;
 	end
 
-	always #52083 clk <= ~clk;
+	always #(clk_period) clk <= ~clk;
 
 	always@(posedge clk)begin
 		recv_state <= recv_next_state;
