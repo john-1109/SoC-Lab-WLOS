@@ -1,5 +1,5 @@
 module uart #(
-  parameter BAUD_RATE = 9600 
+  parameter BAUD_RATE = 115200 
 )(
   // Wishbone Slave ports (WB MI A)
   input wire    wb_clk_i,
