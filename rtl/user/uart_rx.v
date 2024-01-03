@@ -111,7 +111,7 @@ always @(*) begin
           state_w = STOP_BIT;
         end
         rx_index_w = rx_index_r + 3'b001;
-        rx_data_r[rx_index_r] <= rx;
+        rx_data_w[rx_index_r] = rx;
         //$display("rx data bit index:%d %b", rx_index, rx_data_r[rx_index]);
       end else begin
         clk_cnt_w = clk_cnt_r + 32'h0000_0001;
